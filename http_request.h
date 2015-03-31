@@ -21,6 +21,8 @@
 
 using namespace std;
 
+#define String std::wstring;
+
 struct http_response {
 
 	int error_code = 0;
@@ -35,8 +37,6 @@ struct Url {
 	int port;
 };
 
-
-
 inline bool parse_url(const std::string &url, struct Url *url_ptr);
 
 inline bool http_request_get(const string &_url, struct http_response* response){
@@ -46,6 +46,7 @@ inline bool http_request_get(const string &_url, struct http_response* response)
 	if (!parse_url(_url, &url)){
 		return false;
 	}
+
 
 	HINTERNET hIntSession = NULL;
 	HINTERNET hHttpSession = NULL;
@@ -58,12 +59,11 @@ inline bool http_request_get(const string &_url, struct http_response* response)
 
 	if (hIntSession){
 
-		LPCWSTR host = wstring(url.host.begin(), url.host.end()).c_str();
-
+		wstring host = wstring(url.host.begin(), url.host.end());
 		int port = url.scheme == "https" ? INTERNET_DEFAULT_HTTPS_PORT : INTERNET_DEFAULT_HTTP_PORT;
 
 		// hInternet, server_name, port, username, password, service, flags, context
-		hHttpSession = InternetConnect(hIntSession, host, port, 0, 0, INTERNET_SERVICE_HTTP, 0, NULL);
+		hHttpSession = InternetConnect(hIntSession, host.c_str(), port, 0, 0, INTERNET_SERVICE_HTTP, 0, NULL);
 
 		if (hHttpSession){
 
