@@ -8,25 +8,25 @@
 #include <windows.h>
 #include <string>
 
+#include <iostream>
+
+#ifndef HTTP_REQUEST_H
+#define HTTP_REQUEST_H
+
 #include <wininet.h>
 #pragma comment(lib, "WinInet.lib")
 
-
-
-#ifndef HTTP_REQUEST_H
-
-#define HTTP_REQUEST_H
 
 #ifdef _WIN32 || _WIN64
 
 using namespace std;
 
-
-
 struct http_response {
 
 	int error_code = 0;
-	std::string content;
+
+	std::string headers;
+	std::string body;
 };
 
 struct Url {
@@ -42,7 +42,7 @@ inline bool parse_url(const std::string &url, struct Url *url_ptr);
 inline bool http_request_get(const string &_url, struct http_response* response){
 
 	Url url;
-	
+
 	if (!parse_url(_url, &url)){
 		return false;
 	}
@@ -65,13 +65,13 @@ inline bool http_request_get(const string &_url, struct http_response* response)
 		// hInternet, server_name, port, username, password, service, flags, context
 		hHttpSession = InternetConnect(hIntSession, host, port, 0, 0, INTERNET_SERVICE_HTTP, 0, NULL);
 
-		DWORD dwTimeOut = 10 * 1000; // In milliseconds
-
-		InternetSetOption(hHttpSession, INTERNET_OPTION_CONNECT_TIMEOUT, &dwTimeOut, sizeof(dwTimeOut));
-		InternetSetOption(hHttpSession, INTERNET_OPTION_RECEIVE_TIMEOUT, &dwTimeOut, sizeof(dwTimeOut));
-		InternetSetOption(hHttpSession, INTERNET_OPTION_SEND_TIMEOUT, &dwTimeOut, sizeof(dwTimeOut));
-
 		if (hHttpSession){
+
+			DWORD dwTimeOut = 10 * 1000; // In milliseconds
+
+			InternetSetOption(hHttpSession, INTERNET_OPTION_CONNECT_TIMEOUT, &dwTimeOut, sizeof(dwTimeOut));
+			InternetSetOption(hHttpSession, INTERNET_OPTION_RECEIVE_TIMEOUT, &dwTimeOut, sizeof(dwTimeOut));
+			InternetSetOption(hHttpSession, INTERNET_OPTION_SEND_TIMEOUT, &dwTimeOut, sizeof(dwTimeOut));
 
 			//LPCWSTR path = wstring(url.path.begin(), url.path.end()).c_str();
 
@@ -90,8 +90,6 @@ inline bool http_request_get(const string &_url, struct http_response* response)
 
 				CHAR data[4096];
 
-				std::string content;
-
 				// hInternet, headers, headers_length, optional data after headers - post/put, optional_length
 				if (HttpSendRequest(hHttpRequest, szHeaders, _tcslen(szHeaders), data, strlen(data))) {
 
@@ -100,9 +98,14 @@ inline bool http_request_get(const string &_url, struct http_response* response)
 
 					/// fuck why has no one told me to put this AFTER httpSendRequest... wasted whole day
 					if (HttpQueryInfoA(hHttpRequest, HTTP_QUERY_RAW_HEADERS_CRLF, buffer, &length, NULL)){
-						content.append(buffer, length);
+
+						// probably need this
+						buffer[length] = '\0';
+
+						response->headers = buffer;
 					}
 
+					std::string body;
 					const int size = 1024;
 
 					CHAR szBuffer[size];
@@ -112,14 +115,14 @@ inline bool http_request_get(const string &_url, struct http_response* response)
 
 						szBuffer[dwRead] = '\0';
 
-						content.append(szBuffer, dwRead);
+						body.append(szBuffer, dwRead);
 
 						//printf("bytes read: %d, body size: %d\r\n", dwRead, content.length());
 
 						dwRead = 0;
 					}
 
-					response->content = content;
+					response->body = body;
 				}
 			}
 		}
